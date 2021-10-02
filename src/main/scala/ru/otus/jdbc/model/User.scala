@@ -12,7 +12,7 @@ object Role {
 }
 
 case class User(
-    id: Option[UUID],
+    id: UUID,
     firstName: String,
     lastName: String,
     age: Int,

@@ -12,7 +12,7 @@ values ('reader', 'Reader'),
 ;
 
 create table users (
-    id uuid primary key default uuid_generate_v4(),
+    id uuid primary key not null,
     first_name text not null,
     last_name text not null,
     age integer not null

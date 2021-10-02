@@ -18,7 +18,7 @@ import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class UserDaoSlickImplTest extends AnyFreeSpec
-  with ScalaCheckDrivenPropertyChecks with ScalaFutures  with ForAllTestContainer {
+  with ScalaCheckDrivenPropertyChecks with ScalaFutures with ForAllTestContainer {
   override val container: PostgreSQLContainer = PostgreSQLContainer()
 
   var db: Database = _
@@ -42,7 +42,7 @@ class UserDaoSlickImplTest extends AnyFreeSpec
   implicit lazy val arbString: Arbitrary[String] = Arbitrary(arbitrary[List[Char]] map (_.filter(_ != 0).mkString))
 
   implicit val genUser: Gen[User] = for {
-    id <- Gen.option(Gen.uuid)
+    id <- Gen.uuid
     firstName <- arbitrary[String]
     lastName <- arbitrary[String]
     age <- arbitrary[Int]
@@ -71,10 +71,10 @@ class UserDaoSlickImplTest extends AnyFreeSpec
           val createdUser = dao.createUser(user1).futureValue
           val toUpdate = user2.copy(id = createdUser.id)
 
-          dao.updateUser(toUpdate)
+          dao.updateUser(toUpdate).futureValue
 
-          dao.getUser(toUpdate.id.get).futureValue shouldBe Some(toUpdate)
-          createdUsers.foreach { u => dao.getUser(u.id.get).futureValue shouldBe Some(u)
+          dao.getUser(toUpdate.id).futureValue shouldBe Some(toUpdate)
+          createdUsers.foreach { u => dao.getUser(u.id).futureValue shouldBe Some(u)
           }
         }
       }
@@ -86,11 +86,11 @@ class UserDaoSlickImplTest extends AnyFreeSpec
         val createdUsers1 = users1.map(dao.createUser(_).futureValue)
         val createdUser = dao.createUser(user1).futureValue
 
-        dao.getUser(createdUser.id.get).futureValue shouldBe Some(createdUser)
-        dao.deleteUser(createdUser.id.get).futureValue shouldBe Some(createdUser)
-        dao.getUser(createdUser.id.get).futureValue shouldBe None
+        dao.getUser(createdUser.id).futureValue shouldBe Some(createdUser)
+        dao.deleteUser(createdUser.id).futureValue shouldBe Some(createdUser)
+        dao.getUser(createdUser.id).futureValue shouldBe None
 
-        createdUsers1.foreach { u => dao.getUser(u.id.get).futureValue shouldBe Some(u)}
+        createdUsers1.foreach { u => dao.getUser(u.id).futureValue shouldBe Some(u)}
       }
     }
 
@@ -101,6 +101,7 @@ class UserDaoSlickImplTest extends AnyFreeSpec
             val withOtherLastName = users1.filterNot(_.lastName == lastName)
             val withLastName      = users2.map(_.copy(lastName = lastName))
 
+            dao.deleteAll().futureValue
             withOtherLastName.foreach(dao.createUser(_).futureValue)
             val createdWithLasName = withLastName.map(dao.createUser(_).futureValue)
 
@@ -111,9 +112,11 @@ class UserDaoSlickImplTest extends AnyFreeSpec
     "findAll" in {
       forAll { users: Seq[User] =>
         val dao = new UserDaoSlickImpl(db)
+        dao.deleteAll().futureValue
         val createdUsers = users.map(dao.createUser(_).futureValue)
+        val foundUsers = dao.findAll().futureValue.toSet
 
-        dao.findAll().futureValue.toSet shouldBe createdUsers.toSet
+        foundUsers shouldBe createdUsers.toSet
       }
     }
 
